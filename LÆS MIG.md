@@ -24,7 +24,16 @@ Når du ændrer noget og pusher til `main`, er det opdateret i Excel næste gang
 (Der ligger ingen data i filerne. Dine Excel-data forlader aldrig din computer.)
 
 ## 2. Installér i Excel
-**Arbejds-PC (anbefalet):** Bed IT om at udrulle `manifest.xml` via *Microsoft 365 admin center → Integrerede apps*.
+**Nemmest: Upload det selv** (hvis din Excel-version har knappen):
+Hjem → Tilføjelsesprogrammer → Flere tilføjelsesprogrammer → Mine tilføjelsesprogrammer → *Upload mit tilføjelsesprogram* → vælg `manifest.xml`.
+
+**Installationsfil (Windows, uden admin-rettigheder):**
+Hent [`Installer.cmd`](https://github.com/Zeraxdk/multifilter/raw/main/Installer.cmd), dobbeltklik på den, og genstart Excel.
+Den henter `manifest.xml` til `%LOCALAPPDATA%\MultiFilter` og registrerer det under din egen bruger (HKCU, Office' *udvikler-sideload*).
+Hvis Windows viser "Windows beskyttede din pc", så tryk *Flere oplysninger* → *Kør alligevel*.
+Du fjerner det igen med `Afinstaller.cmd`.
+
+**Via IT:** Bed IT om at udrulle `manifest.xml` via *Microsoft 365 admin center → Integrerede apps*.
 Så dukker det op hos dig og eventuelle kolleger, ligesom andre tilføjelsesprogrammer.
 
 **Selv, via en delt mappe:**
