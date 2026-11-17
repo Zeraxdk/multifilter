@@ -23,7 +23,7 @@ Du fjerner den igen ved at fjerne fluebenet i samme dialog.
 
 ## Brug
 1. Klik på en celle i den kolonne, du vil filtrere, fx *Material*.
-2. Klik på **Multi-filter** på fanen Data.
+2. Åbn Multi-filter på en af tre måder: **højreklik → Multi-filter...**, **Ctrl+Shift+M** eller knappen på fanen **Data**.
 3. Indsæt dine værdier med **én per linje**. Det er sådan de kommer, når du kopierer en kolonne i Excel.
    Semikolon og tab virker også. Komma bruges **ikke**, fordi det er decimaltegn.
 4. Klik **Filtrér** eller tryk **Ctrl+Enter**.

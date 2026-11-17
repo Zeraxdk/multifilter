@@ -28,14 +28,28 @@ namespace MultiFilter
       </tab>
     </tabs>
   </ribbon>
+  <contextMenus>
+    <contextMenu idMso='ContextMenuCell'>
+      <button id='mfCtxCell' label='Multi-filter...' getImage='GetImage' onAction='OnOpen' insertBeforeMso='Cut'/>
+      <menuSeparator id='mfCtxCellSep' insertBeforeMso='Cut'/>
+    </contextMenu>
+    <contextMenu idMso='ContextMenuListRange'>
+      <button id='mfCtxList' label='Multi-filter...' getImage='GetImage' onAction='OnOpen' insertBeforeMso='Cut'/>
+      <menuSeparator id='mfCtxListSep' insertBeforeMso='Cut'/>
+    </contextMenu>
+  </contextMenus>
 </customUI>";
 
         static Excel.Application App => (Excel.Application)ExcelDnaUtil.Application;
 
         public Bitmap GetImage(IRibbonControl control) =>
-            control.Id == "mfOpen" ? Icons.Funnel(32, false) : Icons.Funnel(16, true);
+            control.Id == "mfOpen" ? Icons.Funnel(32, false)
+            : control.Id.StartsWith("mfCtx") ? Icons.Funnel(16, false)
+            : Icons.Funnel(16, true);
 
-        public void OnOpen(IRibbonControl control)
+        public void OnOpen(IRibbonControl control) => OpenDialog();
+
+        internal static void OpenDialog()
         {
             try
             {
@@ -60,6 +74,13 @@ namespace MultiFilter
         static void Error(Exception ex) =>
             MessageBox.Show(new ExcelWindow(App.Hwnd), ex is FilterException ? ex.Message : "Fejl: " + ex.Message,
                             "Multi-filter", MessageBoxButtons.OK, ex is FilterException ? MessageBoxIcon.Information : MessageBoxIcon.Error);
+    }
+
+    public static class Commands
+    {
+        /// <summary>Ctrl+Shift+M åbner Multi-filter.</summary>
+        [ExcelCommand(Name = "MultiFilter.Open", ShortCut = "^+M")]
+        public static void Open() => MultiFilterRibbon.OpenDialog();
     }
 
     internal sealed class ExcelWindow : IWin32Window
