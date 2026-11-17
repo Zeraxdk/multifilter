@@ -47,7 +47,8 @@ namespace MultiFilter
             : control.Id.StartsWith("mfCtx") ? Icons.Funnel(16, false)
             : Icons.Funnel(16, true);
 
-        public void OnOpen(IRibbonControl control) => OpenDialog();
+        // Åbn vinduet først når Excel er færdig med at lukke menuen/båndet (ellers sker der intet fra højreklik-menuen).
+        public void OnOpen(IRibbonControl control) => ExcelAsyncUtil.QueueAsMacro(OpenDialog);
 
         internal static void OpenDialog()
         {
