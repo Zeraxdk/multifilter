@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-filter</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #242424; --muted: #616161; --border: #d1d1d1;
+    --accent: #217346; --accent-hover: #1a5c38; --soft: #f3f9f5;
+    --warn-bg: #fff8e6; --warn-fg: #8a5a00; --err-bg: #fdecea; --err-fg: #a4262c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 14px; background: var(--bg); color: var(--fg);
+         font: 13px/1.4 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
+  .sub { color: var(--muted); margin: 0 0 12px; font-size: 12px; }
+  .col { background: var(--soft); border: 1px solid #cfe5d8; border-radius: 6px;
+         padding: 8px 10px; margin-bottom: 12px; }
+  .col small { color: var(--muted); display: block; font-size: 11px; }
+  .col b { word-break: break-word; }
+  label.lbl { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
+  label.lbl span { font-weight: 400; color: var(--muted); }
+  textarea { width: 100%; min-height: 150px; resize: vertical; padding: 8px;
+             border: 1px solid var(--border); border-radius: 4px; font: 13px Consolas, monospace; }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  .check { display: flex; gap: 6px; align-items: center; margin: 8px 0 12px; }
+  .row { display: flex; gap: 6px; }
+  button { flex: 1; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--border);
+           background: #fff; color: var(--fg); font: inherit; cursor: pointer; }
+  button:hover { background: #f5f5f5; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--accent-hover); }
+  button:disabled { opacity: .5; cursor: default; }
+  .full { width: 100%; margin-bottom: 6px; }
+  #msg { margin-top: 12px; padding: 8px 10px; border-radius: 4px; display: none; white-space: pre-wrap; }
+  #msg.ok   { display: block; background: var(--soft); color: var(--accent); }
+  #msg.warn { display: block; background: var(--warn-bg); color: var(--warn-fg); }
+  #msg.err  { display: block; background: var(--err-bg); color: var(--err-fg); }
+  .hint { color: var(--muted); font-size: 11px; margin-top: 14px; }
+</style>
+</head>
+<body>
+  <h1>Multi-filter</h1>
+  <p class="sub">Filtrér en kolonne på mange værdier på én gang.</p>
+
+  <div class="col"><small>Kolonne (klik på en celle i den kolonne du vil filtrere)</small><b id="colName">–</b></div>
+
+  <label class="lbl" for="values">Værdier <span id="count">0 værdier</span></label>
+  <textarea id="values" placeholder="106775, 114157, 114162&#10;&#10;…eller indsæt en hel kolonne (Ctrl+V)"></textarea>
+
+  <label class="check"><input type="checkbox" id="contains"> Indeholder (delvis match)</label>
+
+  <button class="primary full" id="apply">Filtrér</button>
+  <div class="row">
+    <button id="clearCol">Ryd kolonne</button>
+    <button id="clearAll">Ryd alle filtre</button>
+  </div>
+
+  <div id="msg"></div>
+
+  <p class="hint">Adskil med komma, semikolon, linjeskift, tab eller |. Ctrl+Enter i feltet filtrerer.</p>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+function parseTerms(text) {
+  const seen = new Map();
+  for (const raw of text.split(/[,;|\t\r\n]+/)) {
+    const t = raw.replace(/ /g, " ").trim();
+    if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t);
+  }
+  return [...seen.values()];
+}
+
+function showMsg(kind, text) { const m = $("msg"); m.className = kind; m.textContent = text; }
+function clearMsg() { const m = $("msg"); m.className = ""; m.textContent = ""; }
+
+function updateCount() {
+  const n = parseTerms($("values").value).length;
+  $("count").textContent = n === 1 ? "1 værdi" : n + " værdier";
+}
+
+/* Finder filterområdet for den aktive celle: tabel, eksisterende autofilter eller dataområdet rundt om cellen. */
+async function getTarget(ctx, create) {
+  const sheet = ctx.workbook.worksheets.getActiveWorksheet();
+  const cell = ctx.workbook.getActiveCell();
+  cell.load("columnIndex,rowIndex");
+  const tables = cell.getTables(false);
+  tables.load("items/name");
+  const af = sheet.autoFilter;
+  const afRange = af.getRangeOrNullObject();
+  afRange.load("columnIndex,columnCount,rowIndex,rowCount");
+  await ctx.sync();
+
+  if (tables.items.length > 0) {
+    const table = tables.items[0];
+    const tr = table.getRange();
+    tr.load("columnIndex,columnCount,rowIndex,rowCount");
+    await ctx.sync();
+    return { kind: "table", table, sheet, range: tr, col: cell.columnIndex - tr.columnIndex };
+  }
+
+  let rng = afRange;
+  if (afRange.isNullObject) {
+    if (!create) throw new Error("Der er intet filter på arket.");
+    rng = cell.getSurroundingRegion();
+    rng.load("columnIndex,columnCount,rowIndex,rowCount");
+    await ctx.sync();
+    if (rng.rowCount < 2) throw new Error("Klik på en celle inde i dine data (med overskrift i første række).");
+  }
+  const col = cell.columnIndex - rng.columnIndex;
+  if (col < 0 || col >= rng.columnCount) throw new Error("Den aktive celle er uden for filterområdet.");
+  return { kind: "range", sheet, range: rng, col, isNew: afRange.isNullObject };
+}
+
+async function refreshColumn() {
+  try {
+    await Excel.run(async ctx => {
+      const t = await getTarget(ctx, true);
+      const h = t.range.getCell(0, t.col);
+      h.load("text");
+      await ctx.sync();
+      $("colName").textContent = String(h.text[0][0] || "(uden overskrift)");
+    });
+  } catch { $("colName").textContent = "–"; }
+}
+
+async function applyFilter() {
+  clearMsg();
+  const terms = parseTerms($("values").value);
+  if (!terms.length) { showMsg("warn", "Skriv eller indsæt nogle værdier først."); return; }
+  const contains = $("contains").checked;
+  const lowerTerms = terms.map(t => t.toLowerCase());
+  const termIndex = new Map(lowerTerms.map((t, i) => [t, i]));
+
+  try {
+    await Excel.run(async ctx => {
+      const t = await getTarget(ctx, true);
+      const header = t.range.getCell(0, t.col);
+      const data = t.range.getColumn(t.col).getOffsetRange(1, 0).getResizedRange(-1, 0);
+      header.load("text");
+      data.load("values,text");
+      await ctx.sync();
+
+      const found = new Array(terms.length).fill(false);
+      const hits = new Set();
+      for (let r = 0; r < data.values.length; r++) {
+        const s = String(data.values[r][0]).replace(/ /g, " ").trim().toLowerCase();
+        if (!s) continue;
+        let match = false;
+        if (contains) {
+          lowerTerms.forEach((term, i) => { if (s.includes(term)) { found[i] = true; match = true; } });
+        } else if (termIndex.has(s)) {
+          found[termIndex.get(s)] = true; match = true;
+        } else {
+          const tx = String(data.text[r][0]).trim().toLowerCase();   // fx tal med formatering
+          if (termIndex.has(tx)) { found[termIndex.get(tx)] = true; match = true; }
+        }
+        if (match) hits.add(String(data.text[r][0]));
+      }
+
+      const colName = header.text[0][0];
+      if (!hits.size) {
+        showMsg("err", `Ingen af de ${terms.length} værdier blev fundet i "${colName}".`);
+        return;
+      }
+
+      const values = [...hits];
+      if (t.kind === "table") {
+        t.table.columns.getItemAt(t.col).filter.applyValuesFilter(values);
+      } else {
+        t.sheet.autoFilter.apply(t.range, t.col, { filterOn: Excel.FilterOn.values, values });
+      }
+      await ctx.sync();
+
+      const missing = terms.filter((_, i) => !found[i]);
+      if (missing.length) {
+        const list = missing.slice(0, 30).join(", ") + (missing.length > 30 ? ` … (+${missing.length - 30})` : "");
+        showMsg("warn", `Filtreret på ${terms.length - missing.length} af ${terms.length} værdier i "${colName}".\nIkke fundet: ${list}`);
+      } else {
+        showMsg("ok", `Filtreret på alle ${terms.length} værdier i "${colName}".`);
+      }
+    });
+  } catch (e) { showMsg("err", e.message || String(e)); }
+}
+
+async function clearColumn() {
+  clearMsg();
+  try {
+    await Excel.run(async ctx => {
+      const t = await getTarget(ctx, false);
+      if (t.kind === "table") t.table.columns.getItemAt(t.col).filter.clear();
+      else t.sheet.autoFilter.clearColumnCriteria(t.col);
+      await ctx.sync();
+      showMsg("ok", "Filter fjernet fra kolonnen.");
+    });
+  } catch (e) { showMsg("err", e.message || String(e)); }
+}
+
+async function clearAll() {
+  clearMsg();
+  try {
+    await Excel.run(async ctx => {
+      const sheet = ctx.workbook.worksheets.getActiveWorksheet();
+      const tables = sheet.tables;
+      tables.load("items/name");
+      const afRange = sheet.autoFilter.getRangeOrNullObject();
+      await ctx.sync();
+      if (!afRange.isNullObject) sheet.autoFilter.clearCriteria();
+      tables.items.forEach(tb => tb.clearFilters());
+      await ctx.sync();
+      showMsg("ok", "Alle filtre på arket er fjernet.");
+    });
+  } catch (e) { showMsg("err", e.message || String(e)); }
+}
+
+Office.onReady(info => {
+  if (info.host !== Office.HostType.Excel) return;
+  if (!Office.context.requirements.isSetSupported("ExcelApi", "1.14")) {
+    showMsg("err", "Din Excel-version er for gammel til dette tilføjelsesprogram (kræver Microsoft 365 / Excel 2021+).");
+  }
+  $("values").addEventListener("input", updateCount);
+  $("values").addEventListener("keydown", e => { if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); applyFilter(); } });
+  $("apply").onclick = applyFilter;
+  $("clearCol").onclick = clearColumn;
+  $("clearAll").onclick = clearAll;
+  Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, refreshColumn);
+  refreshColumn();
+});
+</script>
+</body>
+</html>

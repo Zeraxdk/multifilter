@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Erstat alle forekomster af https://zeraxdk.github.io/multifilter med adressen hvor filerne ligger. -->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+           xsi:type="TaskPaneApp">
+  <Id>e77f017a-a6fb-443d-8474-fcf0b1ee13ca</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Multi-filter</ProviderName>
+  <DefaultLocale>da-DK</DefaultLocale>
+  <DisplayName DefaultValue="Multi-filter"/>
+  <Description DefaultValue="Filtrér en kolonne på mange værdier på én gang ved at indsætte en liste."/>
+  <IconUrl DefaultValue="https://zeraxdk.github.io/multifilter/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://zeraxdk.github.io/multifilter/assets/icon-64.png"/>
+  <SupportUrl DefaultValue="https://zeraxdk.github.io/multifilter/taskpane.html"/>
+  <AppDomains>
+    <AppDomain>https://zeraxdk.github.io</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Workbook"/>
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="ExcelApi" MinVersion="1.14"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://zeraxdk.github.io/multifilter/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="Taskpane.Url"/>
+          </GetStarted>
+          <FunctionFile resid="Taskpane.Url"/>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabData">
+              <Group id="MultiFilter.Group">
+                <Label resid="Group.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16"/>
+                  <bt:Image size="32" resid="Icon.32"/>
+                  <bt:Image size="80" resid="Icon.80"/>
+                </Icon>
+                <Control xsi:type="Button" id="MultiFilter.Open">
+                  <Label resid="Button.Label"/>
+                  <Supertip>
+                    <Title resid="Button.Label"/>
+                    <Description resid="Button.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16"/>
+                    <bt:Image size="32" resid="Icon.32"/>
+                    <bt:Image size="80" resid="Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>MultiFilterPane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://zeraxdk.github.io/multifilter/assets/icon-16.png"/>
+        <bt:Image id="Icon.32" DefaultValue="https://zeraxdk.github.io/multifilter/assets/icon-32.png"/>
+        <bt:Image id="Icon.80" DefaultValue="https://zeraxdk.github.io/multifilter/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://zeraxdk.github.io/multifilter/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="Multi-filter er klar"/>
+        <bt:String id="Group.Label" DefaultValue="Multi-filter"/>
+        <bt:String id="Button.Label" DefaultValue="Multi-filter"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="Find Multi-filter på fanen Data."/>
+        <bt:String id="Button.Tooltip" DefaultValue="Filtrér en kolonne på en liste af værdier (komma, semikolon eller linjeskift)."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
